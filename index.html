@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+</head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            height: 100vh;
+            width: 100%;
+        }
+        #send-container {
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        #message-container {
+            padding: 90px 110px;
+            overflow-y: scroll;
+            height: 600px;
+        }
+        #message-container > li {
+            list-style: none;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        #message-input {
+            width: 80%;
+            height: 30px;
+            font-size: 15px;
+        }
+        #send-button {
+            width: 100px;
+            margin-left: 15px;
+            background-color: green;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .name-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #name-input {
+            margin: 5px;
+            width: 180px;
+            height: 30px;
+            border: 1px solid white;
+        }
+    </style>
+<body>
+    <div id="message-container">
+    </div>
+    <form id="send-container">
+        <input type="text" id="message-input">
+        <button type="submit" id="send-button">Send</button>
+    </form>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const messages = document.getElementById('message-container');
+        const form = document.getElementById('send-container');
+        const input = document.getElementById('message-input');
+        const button = document.getElementById('send-button');
+        let nickname = "";
+
+        let nicknameMenu = document.createElement('form');
+        nicknameMenu.classList.add('name-menu');
+        nicknameMenu.innerHTML = `<input type="text" id="name-input" placeholder = "Please Enter Your Nickname...">`;
+        messages.appendChild(nicknameMenu);
+
+
+        let item = document.createElement('li');
+        messages.appendChild(item);        
+        
+        socket.on('user-typing', (name) => {
+            item.innerHTML = `<i>${name} is typing....</i>`; 
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            socket.emit('user-typing', nickname.value);
+            if(e.keyCode == 13) {
+                item.style.display = "none";
+            } else {
+                item.style.display = "flex";
+            }
+        });
+
+
+        nicknameMenu.addEventListener('submit', (e) => {
+            e.preventDefault();
+            nicknameMenu.style.display = "none";
+            nickname = document.getElementById('name-input');
+
+            socket.emit('room-joining', nickname.value);
+        });
+
+        socket.on('room-joining', (name) => {
+            let item = document.createElement('li');
+            item.innerHTML = `<i>${name} joined the room</i>`; 
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        socket.on('offline', () => {
+            
+        })
+        
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if(input.value) {
+                socket.emit('chat-message', input.value, nickname.value);
+                input.value = "";
+            };
+        });
+
+        socket.on('chat-message', function(msg, name){
+            let item = document.createElement('li');
+            item.textContent = `${name}: ${msg}`; 
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+    </script>
+</body>
+</html>
